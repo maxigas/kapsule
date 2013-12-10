@@ -8,7 +8,7 @@ set -x
 INT_DEV=/dev/sdb1
 EXT_DEV=/dev/sdc1
 INT_DIR=/mount/int
-INT_DIR=/mount/ext
+EXT_DIR=/mount/ext
 # Says if we are doing something actively atm:
 ACTIVE="false"
 # Says how much free space we have:
@@ -26,7 +26,7 @@ if [ -f /tmp/kapsule.lock ]; then
     exit 1
 fi
 
-if [ -f $STORAGE ]; then
+if [ -f $EXT_DEV ]; then
     echo "No storage. Exiting."
     exit 2
 fi
@@ -40,11 +40,19 @@ if ! $ACTIVE; then
         EXT_FREE=$(df --sync --source="available" -h $EXT_DEV|grep -v "Avail")
         INT_FREE=$(df --sync --source="available" -h $INT_DEV|grep -v "Avail")
         EXT_DATA=$(df --sync --source="used" -h $EXT_DEV|grep -v "Used")
+        INT_DATA=$(df --sync --source="used" -h $INT_DEV|grep -v "Used")        
         if [ $EXT_DATA < $INT_FREE ]; then
-            echo "Decided to copy data..."
+            echo "Decided to copy data in..."
             DATE=$(date +%Y-%m-%d)
             mkdir $INT_DIR/$DATE
             cp -vR $EXT_DIR $INT_DIR/$DATE
+            sync
+            sync
+        fi
+        if [ $INT_DATA < $EXT_DREE ]; then
+            echo "Decided to copy data out..."
+            mkdir $EXT_DIR/kapsule
+            cp -vR $INT_DIR $EXT_DIR/kapsule
             sync
             sync
         fi
