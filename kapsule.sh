@@ -37,10 +37,10 @@ if ! $ACTIVE; then
     if [ -f $EXT_DEV ]; then
         echo "Found new device..."
         mount $EXT_DEV $EXT_DIR
-        EXT_FREE=$(df --sync --source="available" -h $EXT_DEV|grep -v "Avail")
-        INT_FREE=$(df --sync --source="available" -h $INT_DEV|grep -v "Avail")
-        EXT_DATA=$(df --sync --source="used" -h $EXT_DEV|grep -v "Used")
-        INT_DATA=$(df --sync --source="used" -h $INT_DEV|grep -v "Used")        
+        EXT_FREE=$(df --sync --output="available" -h $EXT_DEV|grep -v "Avail")
+        INT_FREE=$(df --sync --output="available" -h $INT_DEV|grep -v "Avail")
+        EXT_DATA=$(df --sync --output="used" -h $EXT_DEV|grep -v "Used")
+        INT_DATA=$(df --sync --output="used" -h $INT_DEV|grep -v "Used")        
         if [ $EXT_DATA < $INT_FREE ]; then
             echo "Decided to copy data in..."
             DATE=$(date +%Y-%m-%d)
