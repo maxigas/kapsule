@@ -15,14 +15,13 @@ INT_FREE=0
 EXT_FREE=0
 EXT_DATA=0
 LOCK_FILE=/tmp/kapsule.lock
-ACTI_FILE=/tmp/kapsule.acti
 
 # SANITY CHECKS
 # Exit values:
 # 1  Already running.
 # 2  No storage.
 
-if [ -f /tmp/kapsule.lock ]; then
+if [ -f $LOCK_FILE ]; then
     echo "Already running. Exiting."
     exit 1
 fi
@@ -34,39 +33,33 @@ fi
 
 # CHECK FOR NEW DEVICE
 
-if ! [ -f $ACTIVE ]; then
-touch /tmp/kapsule.lock
-    if [ -f $EXT_DEV ]; then
-        touch /tmp/kapsule.acti
-        echo "Found new device..."
-        mount $EXT_DEV $EXT_DIR
-        EXT_FREE=$(df -m $EXT_DIR | tail -n 1 | awk '{print $4}')
-        INT_FREE=$(df -m $INT_DIR | tail -n 1 | awk '{print $4}')
-        EXT_DATA=$(df -m $EXT_DIR | tail -n 1 | awk '{print $3}')
-        INT_DATA=$(df -m $INT_DIR | tail -n 1 | awk '{print $3}')
-        if [ $EXT_DATA < $INT_FREE ]; then
-            echo "Decided to copy data in..."
-            DATE=$(date +%Y-%m-%d)
-            mkdir $INT_DIR/$DATE
-            cp -vR $EXT_DIR $INT_DIR/$DATE
+touch $LOCK_FILE
+if [ -f $EXT_DEV ]; then
+    echo "Found new device..."
+    mount $EXT_DEV $EXT_DIR
+    EXT_FREE=$(df -m $EXT_DIR | tail -n 1 | awk '{print $4}')
+    INT_FREE=$(df -m $INT_DIR | tail -n 1 | awk '{print $4}')
+    EXT_DATA=$(df -m $EXT_DIR | tail -n 1 | awk '{print $3}')
+    INT_DATA=$(df -m $INT_DIR | tail -n 1 | awk '{print $3}')
+    if [ $EXT_DATA < $INT_FREE ]; then
+        echo "Decided to copy data in..."
+        DATE=$(date +%Y-%m-%d)
+        mkdir $INT_DIR/$DATE
+        cp -vR $EXT_DIR $INT_DIR/$DATE
             sync
             sync
-        fi
-        if [ $INT_DATA < $EXT_DREE ]; then
-            echo "Decided to copy data out..."
-            mkdir $EXT_DIR/kapsule
-            cp -vR $INT_DIR $EXT_DIR/kapsule
-            sync
-            sync
-        fi
-        echo "Unmounting..."
-        umount -f $EXT_DIR
-        rm $ACTI_FILE
-    else
-        echo "No new device..."
     fi
-rm /tmp/kapsule.lock
+    if [ $INT_DATA < $EXT_DREE ]; then
+        echo "Decided to copy data out..."
+        mkdir $EXT_DIR/kapsule
+        cp -vR $INT_DIR $EXT_DIR/kapsule
+        sync
+        sync
+    fi
+    echo "Unmounting..."
+    umount -f $EXT_DIR
 else
-    echo "Already active..."
+    echo "No new device..."
 fi
+rm $LOCK_FILE
 
