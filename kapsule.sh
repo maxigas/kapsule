@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Author: maxigas <maxigas@anargeek.net> and webmind <webmind@puscii.nl>
 # Licence: GPLv3
 # ----------------------------------------------------------------------
@@ -14,6 +14,9 @@ INT_MNT=/mnt/int
 EXT_MNT=/mnt/ext
 INT_DIR=$INT_MNT/kapsule
 EXT_DIR=$EXT_MNT/kapsule
+# Program directory: has to contain kapsule.sh and motion.config
+PRG_DIR=/home/mxs/dev/kapsule/
+DATE=$(date +%Y-%m-%d)
 
 # Says if we are doing something actively atm:
 ACTIVE=false
@@ -67,6 +70,10 @@ fi
 touch $LOCK_FILE
 if [ -b $EXT_DEV ]; then
     echo "Found new device..."
+    # MOTION PART OVER
+    echo "Stopping motion capture..."
+    killall -SIGTERM motion
+    # MOTION PART START
     if mount | grep $EXT_MNT > /dev/null; then
         echo "Hm something is already mounted in EXT_MNT so we unmount it to be sure."
         umount $EXT_MNT
@@ -74,14 +81,19 @@ if [ -b $EXT_DEV ]; then
     mount $EXT_DEV $EXT_MNT        
     EXT_FREE=$(df -m $EXT_DIR | tail -n 1 | awk '{print $4}')
     INT_FREE=$(df -m $INT_DIR | tail -n 1 | awk '{print $4}')
-    EXT_DATA=$(df -m $EXT_DIR | tail -n 1 | awk '{print $3}')
-    INT_DATA=$(df -m $INT_DIR | tail -n 1 | awk '{print $3}')
+    # Better to use du instead of df here
+    EXT_DATA=$(du $EXT_DIR | tail -n 1 | awk '{print $1}')
+    INT_DATA=$(du $INT_DIR | tail -n 1 | awk '{print $1}')
+    # DEBUG
+    echo EXT_DIR: $EXT_DIR, INT_DIR: $INT_DIR
     echo EXT_FREE: $EXT_FREE, INT_FREE: $INT_FREE, EXT_DATA: $EXT_DATA, INT_DATA: $INT_DATA
     if [ $EXT_DATA -lt $INT_FREE ]; then
         echo "Decided to copy data in..."
-        DATE=$(date +%Y-%m-%d)
-        mkdir $INT_DIR/$DATE
-        cp -vR $EXT_DIR $INT_DIR/$DATE
+        if ! [ -d $EXT_DIR/$DATE ]; then
+            mkdir $EXT_DIR/$DATE
+        fi
+        touch $INT_DIR/kapsule_was_here
+        cp -vR $INT_DIR/* $EXT_DIR/$DATE/.
             sync
             sync
     else
@@ -89,8 +101,10 @@ if [ -b $EXT_DEV ]; then
     fi
     if [ $INT_DATA -lt $EXT_FREE ]; then
         echo "Decided to copy data out..."
-        mkdir $EXT_DIR
-        cp -vR $INT_DIR $EXT_DIR
+        if ! [ -d $EXT_DIR/$DATE ]; then
+            mkdir $EXT_DIR/$DATE
+        fi
+        cp -vR $INT_DIR/* $EXT_DIR/$DATE
         sync
         sync
     else
@@ -98,8 +112,20 @@ if [ -b $EXT_DEV ]; then
     fi
     echo "Unmounting..."
     umount -f $EXT_DEV
+    # MOTION PART START
+    echo "Starting motion capture."
+    if ! [ -d $INT_DIR/motion ]; then
+        echo "Creating new directory."
+        mkdir $INT_DIR/motion
+    fi
+    if ! [ -f $PRG_DIR/motion.conf ]; then
+        echo "Cannot find motion.conf"
+    fi
+    echo "Starting motion"
+    motion -c $PRG_DIR/motion.conf
+    # MOTION PART OVER
 else
     echo "No new device..."
 fi
 rm $LOCK_FILE
-
+echo READY
